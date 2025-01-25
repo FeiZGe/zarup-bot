@@ -169,3 +169,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Models
+./models/sshleifer-distilbart-cnn-12-6
