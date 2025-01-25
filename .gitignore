@@ -171,4 +171,4 @@ cython_debug/
 .pypirc
 
 # Models
-./models/sshleifer-distilbart-cnn-12-6
+/models/sshleifer-distilbart-cnn-12-6
