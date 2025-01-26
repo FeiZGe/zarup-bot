@@ -1,10 +1,6 @@
 import discord
 from discord.ext import commands
-import requests
-import re
-from bs4 import BeautifulSoup
-
-from summarizer import summarize_article  # ฟังก์ชันสรุปจาก summarizer.py
+import asyncio
 
 import os
 from dotenv import load_dotenv
@@ -25,57 +21,15 @@ GUILD = int(os.getenv("GUILD_ID"))
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-@bot.command(name="summarize", description="สรุปบทความจาก <URL>", guild=GUILD)
-async def summarize(ctx, url: str):
-    if ctx.author == bot.user:
-        return
+# โหลด cogs จากโฟลเดอร์ cogs
+async def load_cogs():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")  # ใช้ await กับ load_extension
 
-    try:
-        # ดึงบทความจาก URL
-        response = requests.get(url)
-        response.encoding = 'utf-8'
-        response.raise_for_status()  # ตรวจสอบสถานะการตอบกลับ
-        soup = BeautifulSoup(response.text, 'html.parser')
-        text = " ".join([p.text for p in soup.find_all('p')])
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(token)
 
-        # แสดงข้อความว่า "กำลังสรุป..."
-        message = await ctx.send("กำลังสรุป...")
-
-        # สรุปบทความ
-        summary = summarize_article(text)
-
-        # แบ่งข้อความสรุปเป็นประโยค โดยใช้ regex เพื่อตัดที่จุดสิ้นสุดของประโยค
-        sentence_endings = re.compile(r'(?<=[.!?])\s+')  # กำหนดให้ตัดข้อความหลังเครื่องหมาย . , ? , !
-        sentences = sentence_endings.split(summary)  # แยกข้อความเป็นประโยค
-
-        # ใช้ textwrap เพื่อตัดข้อความเป็นหลายส่วนที่มีความยาวไม่เกิน 2000 ตัวอักษร
-        chunked_summary = []
-        current_chunk = ""
-
-        for sentence in sentences:
-            if len(current_chunk + sentence) > 2000:
-                chunked_summary.append(current_chunk.strip())
-                current_chunk = sentence
-            else:
-                current_chunk += " " + sentence
-
-        if current_chunk:
-            chunked_summary.append(current_chunk.strip())
-
-        # ส่งข้อความสรุปภาษาอังกฤษ
-        for part in chunked_summary:
-            embed = discord.Embed(
-                title="Summary in English",
-                description=part,
-                color=discord.Color.blue()
-            )
-            await ctx.send(embed=embed)
-
-        await message.delete()
-
-    except requests.exceptions.RequestException as e:
-        await ctx.send(f"Error fetching the article: {str(e)}")
-    except Exception as e:
-        await ctx.send(f"Error: {str(e)}")
-
-bot.run(token)
+asyncio.run(main())
