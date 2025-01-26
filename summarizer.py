@@ -12,21 +12,25 @@ tokenizer = AutoTokenizer.from_pretrained(model_path)
 def summarize_article(text):
     summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
 
-    # แบ่งข้อความออกเป็นส่วนๆ หากข้อความยาวเกินไป
-    max_input_length = 1024  # ขนาดสูงสุดที่โมเดลสามารถรับได้
-    text_tokens = tokenizer.encode(text, truncation=True, max_length=max_input_length)
+    # กำหนดขนาดสูงสุดของข้อความที่ต้องการ (max_length 100-200 ขึ้นอยู่กับความยาวของข้อความ)
+    chunk_size = 1024  # ขนาดข้อความที่โมเดลรองรับ 1024
+    chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]  # แบ่งข้อความเป็นส่วนๆ
 
-    # แบ่งข้อความออกเป็นหลายๆ ชิ้นหากมีความยาวเกินไป
-    chunks = [text[i:i+max_input_length] for i in range(0, len(text_tokens), max_input_length)]
-    
-    # สรุปแต่ละชิ้นส่วน
     summaries = []
     for chunk in chunks:
-        summary = summarizer(chunk, max_length=800, min_length=50, do_sample=False, length_penalty=2.0)
+        # ปรับ max_length ตามขนาดของข้อความที่ส่งเข้ามา
+        chunk_length = len(chunk.split())  # นับคำในข้อความ
+        if chunk_length <= 50:
+            max_length = 50
+        elif chunk_length <= 100:
+            max_length = 100
+        else:
+            max_length = 200
+
+        summary = summarizer(chunk, max_length=max_length, min_length=30, do_sample=False)
         summaries.append(summary[0]["summary_text"])
 
-    # รวมสรุปทั้งหมด
-    full_summary = " ".join(summaries)
-    
-    # คืนค่าผลลัพธ์ที่ได้
-    return full_summary
+    # รวมผลลัพธ์จากแต่ละส่วน
+    final_summary = ' '.join(summaries)
+
+    return final_summary
