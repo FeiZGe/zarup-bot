@@ -12,6 +12,7 @@ token = os.getenv("BOT_TOKEN")
 # Create a bot instance
 intents = discord.Intents.default()
 intents.message_content = True  # เปิดให้บอทอ่านข้อความได้
+intents.messages = True  # เปิดให้บอทอ่านข้อความได้
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
