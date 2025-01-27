@@ -44,8 +44,8 @@ class SummarizeCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name="summarize", description="สรุปบทความจาก <URL>")
-    async def summarize(self, ctx, url: str):
-        if ctx.author == self.bot.user:
+    async def summarize(self, interaction: discord.Interaction, url: str):
+        if interaction.user == self.bot.user:
             return
 
         try:
@@ -57,7 +57,7 @@ class SummarizeCog(commands.Cog):
             text = " ".join([p.text for p in soup.find_all('p')])
 
             # แสดงข้อความว่า "กำลังสรุป..."
-            message = await ctx.send("กำลังสรุป...")
+            await interaction.response.send_message("กำลังสรุป...", ephemeral=True)
 
             # สรุปบทความ
             summary = summarize_article(text)
@@ -80,21 +80,22 @@ class SummarizeCog(commands.Cog):
             if current_chunk:
                 chunked_summary.append(current_chunk.strip())
 
-            # ส่งข้อความสรุปภาษาอังกฤษ
+            # ส่งข้อความสรุปไปยัง DM ของผู้ใช้
             for part in chunked_summary:
                 embed = discord.Embed(
                     title="Summary in English",
                     description=part,
                     color=discord.Color.blue()
                 )
-                await ctx.send(embed=embed)
+                await interaction.user.send(embed=embed)
 
-            await message.delete()
+            # แจ้งในช่องแชทว่าได้ส่ง DM แล้ว
+            await interaction.followup.send(f"ส่งข้อความสรุปไปยัง DM ของคุณ {interaction.user.display_name} แล้ว!")
 
         except requests.exceptions.RequestException as e:
-            await ctx.send(f"Error fetching the article: {str(e)}")
+            await interaction.followup.send(f"Error fetching the article: {str(e)}")
         except Exception as e:
-            await ctx.send(f"Error: {str(e)}")
+            await interaction.followup.send(f"Error: {str(e)}")
 
 # ฟังก์ชันสำหรับเพิ่ม Cog ให้กับ bot
 async def setup(bot):
