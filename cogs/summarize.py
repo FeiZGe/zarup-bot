@@ -91,8 +91,10 @@ class SummarizeCog(commands.Cog):
                 embed = discord.Embed(
                     title=title_text,
                     description=part,
-                    color=discord.Color.blue()
+                    color=discord.Color.random()
                 )
+                embed.add_field(name="Website URL", value=url)
+                embed.set_footer(text="สรุปจาก Za-rup bot")
                 await interaction.user.send(embed=embed)
 
             # แจ้งในช่องแชทว่าได้ส่ง DM แล้ว
