@@ -63,7 +63,7 @@ class SummarizeCog(commands.Cog):
             text = " ".join([p.text for p in soup.find_all('p')])
 
             # แสดงข้อความว่า "กำลังสรุป..."
-            await interaction.response.send_message("กำลังสรุป...", ephemeral=True)
+            await interaction.response.send_message("กำลังสรุป...", ephemeral=True, delete_after=5) # ลบข้อความหลังจาก 5 วินาที
 
             # สรุปบทความ
             summary = summarize_article(text)
@@ -98,7 +98,8 @@ class SummarizeCog(commands.Cog):
                 await interaction.user.send(embed=embed)
 
             # แจ้งในช่องแชทว่าได้ส่ง DM แล้ว
-            await interaction.followup.send(f"ส่งข้อความสรุปไปยัง DM ของคุณ {interaction.user.display_name} แล้ว!")
+            final_msg = await interaction.followup.send(f"ส่งข้อความสรุปไปยัง DM ของคุณ {interaction.user.display_name} แล้ว!", ephemeral=True)
+            await final_msg.delete(delay=10)  # ลบข้อความหลังจาก 10 วินาที
 
         except requests.exceptions.RequestException as e:
             await interaction.followup.send(f"Error fetching the article: {str(e)}")
