@@ -54,6 +54,12 @@ class SummarizeCog(commands.Cog):
             response.encoding = 'utf-8'
             response.raise_for_status()  # ตรวจสอบสถานะการตอบกลับ
             soup = BeautifulSoup(response.text, 'html.parser')
+
+            # ดึง <h1> แรกสุดที่เจอ
+            title = soup.find('h1')
+            title_text = title.text.strip() if title else "Summary"  # ใช้ "Summary" หากไม่มี <h1>
+
+            # ดึงข้อความทั้งหมดใน <p> และรวมเป็นข้อความเดียว
             text = " ".join([p.text for p in soup.find_all('p')])
 
             # แสดงข้อความว่า "กำลังสรุป..."
@@ -83,7 +89,7 @@ class SummarizeCog(commands.Cog):
             # ส่งข้อความสรุปไปยัง DM ของผู้ใช้
             for part in chunked_summary:
                 embed = discord.Embed(
-                    title="Summary in English",
+                    title=title_text,
                     description=part,
                     color=discord.Color.blue()
                 )
