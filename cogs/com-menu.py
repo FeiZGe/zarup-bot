@@ -1,90 +1,84 @@
+import os
 import discord
 from discord.ext import commands
-from utils.predata import load_data, problem_type
+from utils.predata import load_data
 from utils.time_series import predict_future_complaints
 
-# รายชื่อ 77 จังหวัดของไทย
-THAI_PROVINCES = [
-    "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", 
-    "ชลบุรี", "ชัยนาท", "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก", 
-    "นครปฐม", "นครพนม", "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส", "น่าน", 
-    "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์", "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา", 
-    "พังงา", "พัทลุง", "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่", "พะเยา", "ภูเก็ต", 
-    "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยะลา", "ยโสธร", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี", 
-    "ลพบุรี", "ลำปาง", "ลำพูน", "ศรีสะเกษ", "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ", "สมุทรสงคราม", 
-    "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", 
-    "หนองคาย", "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์", "อุทัยธานี", "อุบลราชธานี"
-]
-
-class ComplaintDropdown(discord.ui.View):
+class ComplaintModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
-        self.problem_type = None
-        self.province = None
+        self.add_item(discord.ui.TextInput(label="ประเภทปัญหา", placeholder="เช่น การจราจร, ภัยธรรมชาติ"))
+        self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="กรอกชื่อจังหวัด (เช่น กรุงเทพมหานคร)"))
 
-        # เพิ่ม Dropdown เข้าไปใน View ทันที
-        self.add_item(self.ProblemTypeDropdown(self))
-        self.add_item(self.ProvinceDropdown(self))
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            problem_type = self.children[0].value.strip()
+            province = self.children[1].value.strip()
+            
+            if not problem_type or not province:
+                await interaction.response.send_message("❌ กรุณากรอกข้อมูลให้ครบถ้วน", ephemeral=True)
+                return
 
-    async def get_selection(self):
-        print(f"🟢 Debug: problem_type={self.problem_type}, province={self.province}")  # Debug
-        return self.problem_type, self.province
+            data = load_data()
+            prediction, graph_path = predict_future_complaints(data, problem_type, province)
 
-    class ProblemTypeDropdown(discord.ui.Select):
-        def __init__(self, parent_view):
-            self.parent_view = parent_view
-            options = [discord.SelectOption(label=ptype) for ptype in problem_type(load_data())]
-            super().__init__(placeholder="เลือกประเภทปัญหา", options=options, max_values=1)
+            if prediction is None or graph_path is None:
+                await interaction.response.send_message("❌ ไม่สามารถพยากรณ์ข้อมูลได้ กรุณาตรวจสอบข้อมูลอีกครั้ง", ephemeral=True)
+                return
 
-        async def callback(self, interaction: discord.Interaction):
-            self.parent_view.problem_type = self.values[0]
-            await interaction.response.edit_message(content=f"เลือกประเภทปัญหา: {self.parent_view.problem_type}")
+            # ✅ สร้าง Embed
+            embed = discord.Embed(
+                title="📊 ผลการพยากรณ์เรื่องร้องเรียนในปีหน้า",
+                description=f"🔹 ประเภทปัญหา: **{problem_type}**\n🔹 จังหวัด: **{province}**\n📌 จำนวนที่คาดการณ์: **{prediction}**",
+                color=discord.Color.yellow()
+            )
 
-    class ProvinceDropdown(discord.ui.Select):
-        def __init__(self, parent_view):
-            self.parent_view = parent_view
-            options = [discord.SelectOption(label=prov) for prov in THAI_PROVINCES]
-            super().__init__(placeholder="เลือกจังหวัด", options=options, max_values=1)
+            # ✅ ตรวจสอบว่ามีรูปในโฟลเดอร์ `assets/graphs` หรือไม่
+            if not os.path.exists(graph_path):
+                await interaction.response.send_message("❌ ไม่พบไฟล์ภาพกราฟ กรุณาลองใหม่อีกครั้ง", ephemeral=True)
+                return
 
-        async def callback(self, interaction: discord.Interaction):
-            self.parent_view.province = self.values[0]
-            await interaction.response.edit_message(content=f"เลือกจังหวัด: {self.parent_view.province}")
+            # ✅ ส่ง Embed + รูปกราฟไปยัง DM
+            user = interaction.user
+            try:
+                await user.send(embed=embed)
+                await user.send(file=discord.File(graph_path))
+                await interaction.response.send_message("📩 **ผลลัพธ์ถูกส่งไปยัง DM ของคุณแล้ว**", ephemeral=True, delete_after=5)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ **ไม่สามารถส่ง DM ได้** กรุณาเปิดการรับข้อความจากเซิร์ฟเวอร์!", ephemeral=True, delete_after=5)
+
+        except Exception as e:
+            print(f"🔴 Error in ComplaintModal: {e}")
+            await interaction.response.send_message(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class ComMenu(discord.ui.View):
-    def __init__(self, bot, dropdown):
+    def __init__(self, bot):
         super().__init__()
         self.bot = bot
-        self.dropdown = dropdown  # รับ dropdown เข้ามา
 
     @discord.ui.button(label="พยากรณ์เรื่องร้องทุกข์", style=discord.ButtonStyle.primary)
     async def predict_complaint(self, interaction: discord.Interaction, button: discord.ui.Button):
-        problem_type, province = await self.dropdown.get_selection()
-        if not problem_type or not province:
-            await interaction.response.send_message("❌ กรุณาเลือกประเภทปัญหาและจังหวัดก่อน!", ephemeral=True)
-            return
         try:
-            data = load_data()
-            prediction = predict_future_complaints(data, problem_type, province)
-            await interaction.response.send_message(f"📊 พยากรณ์เรื่องร้องเรียนประเภท {problem_type} ใน {province}: {prediction}")
+            await interaction.response.send_modal(ComplaintModal(self.bot))  # เปิด Modal
         except Exception as e:
-            print(f"🔴 Error in predict_complaint: {e}")  # Debug Error
+            print(f"🔴 Error in predict_complaint: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
 
     @discord.ui.button(label="ปัญหาที่พบบ่อย", style=discord.ButtonStyle.secondary)
     async def problemBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await interaction.response.send_message("ปัญหาที่พบบ่อย", ephemeral=False)
+            await interaction.response.send_message("📌 ปัญหาที่พบบ่อย: (รอข้อมูล)", ephemeral=False)
         except Exception as e:
-            print(f"🔴 Error in problemBtn: {e}")  # Debug Error
+            print(f"🔴 Error in problemBtn: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
 
     @discord.ui.button(label="ประเมินการแก้ปัญหา", style=discord.ButtonStyle.green)
     async def evaluateBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await interaction.response.send_message("ประเมินการแก้ปัญหา", ephemeral=False)
+            await interaction.response.send_message("💬 ประเมินการแก้ปัญหา: (รอข้อมูล)", ephemeral=False)
         except Exception as e:
-            print(f"🔴 Error in evaluateBtn: {e}")  # Debug Error
+            print(f"🔴 Error in evaluateBtn: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
 
 class ComMenuCog(commands.Cog):
@@ -94,18 +88,16 @@ class ComMenuCog(commands.Cog):
     @commands.command(name="commenu", description="แสดงเมนูเรื่องร้องทุกข์")
     async def com_menu(self, ctx):
         try:
-            print("🟢 คำสั่ง !commenu ถูกเรียกใช้งาน")  # Debug
-            dropdown = ComplaintDropdown(self.bot)  # ✅ แก้ให้ `dropdown` อยู่ใน View ได้
-            view = ComMenu(self.bot, dropdown)
-            view.timeout = None  # ✅ ป้องกัน View หมดอายุ
+            print("🟢 คำสั่ง !commenu ถูกเรียกใช้งาน")
+            view = ComMenu(self.bot)
             embed = discord.Embed(
                 title="📢 เมนูเรื่องร้องทุกข์",
-                description="เลือกประเภทปัญหาและจังหวัดเพื่อพยากรณ์จำนวนเรื่องร้องเรียน",
+                description="กรอกข้อมูลเพื่อพยากรณ์จำนวนเรื่องร้องเรียน",
                 color=discord.Color.blue()
             )
             await ctx.send(embed=embed, view=view)
         except Exception as e:
-            print(f"🔴 Error in com_menu: {e}")  # Debug Error
+            print(f"🔴 Error in com_menu: {e}")
             await ctx.send(f"❌ Error: {str(e)}")
 
 # ฟังก์ชันสำหรับเพิ่ม Cog ให้กับ bot
