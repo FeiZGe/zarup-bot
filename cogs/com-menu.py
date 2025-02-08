@@ -4,7 +4,7 @@ from discord.ext import commands
 from utils.predata import load_data
 from utils.time_series import predict_future_complaints
 
-class ComplaintModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
+class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
@@ -60,7 +60,7 @@ class ComMenu(discord.ui.View):
     @discord.ui.button(label="พยากรณ์เรื่องร้องทุกข์", style=discord.ButtonStyle.primary)
     async def predict_complaint(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await interaction.response.send_modal(ComplaintModal(self.bot))  # เปิด Modal
+            await interaction.response.send_modal(PredictModal(self.bot))  # เปิด Modal
         except Exception as e:
             print(f"🔴 Error in predict_complaint: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
