@@ -175,5 +175,8 @@ cython_debug/
 
 .DS_Store
 
+# Pic
+/assets/graphs/*
+
 # Jupyter Notebook
 testcsv.ipynb
