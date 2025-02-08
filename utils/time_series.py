@@ -13,7 +13,7 @@ GRAPH_DIR = os.path.join(os.path.dirname(__file__), "../assets/graphs")
 os.makedirs(GRAPH_DIR, exist_ok=True)
 
 def predict_future_complaints(data, problem_type, province):
-    """พยากรณ์จำนวนเรื่องร้องทุกข์ในอนาคต (รายปี) พร้อมสร้างและบันทึกกราฟ"""
+    # พยากรณ์จำนวนเรื่องร้องทุกข์ในอนาคต (รายปี) พร้อมสร้างและบันทึกกราฟ
 
     try:
         if "work_year" not in data.columns:
