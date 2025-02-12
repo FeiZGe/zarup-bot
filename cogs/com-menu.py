@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 from utils.predata import load_data
 from utils.time_series import predict_future_complaints
+from utils.cluster import cluster_frequent_problems
 
 class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
     def __init__(self, bot):
@@ -52,6 +53,49 @@ class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื�
             print(f"🔴 Error in ComplaintModal: {e}")
             await interaction.response.send_message(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
+class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะห์ปัญหาที่พบบ่อย"):
+    def __init__(self, bot):
+        super().__init__()
+        self.bot = bot
+        self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="เช่น กรุงเทพมหานคร"))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        try:
+            province = self.children[0].value.strip()
+
+            if not province:
+                await interaction.followup.send("❌ กรุณากรอกชื่อจังหวัด", ephemeral=True)
+                return
+
+            # ✅ โหลดข้อมูลจาก CSV
+            data = load_data()
+
+            # ✅ เรียกใช้ฟังก์ชัน Clustering สำหรับจังหวัดที่เลือก
+            top_problems, graph_path = cluster_frequent_problems(data, province=province)
+
+            if top_problems is None or graph_path is None:
+                await interaction.followup.send(f"❌ ไม่พบข้อมูลสำหรับจังหวัด {province}", ephemeral=True)
+                return
+
+            # ✅ สร้าง Embed แสดงผล
+            embed = discord.Embed(
+                title=f"📊 ปัญหาที่พบบ่อยใน {province}",
+                description="🔹 **Top 5 ปัญหาสำคัญในพื้นที่**",
+                color=discord.Color.blue()
+            )
+
+            # ✅ เพิ่มข้อมูลปัญหาที่พบบ่อย (เรียงตามจำนวน)
+            embed.add_field(name="📌 ปัญหาที่พบบ่อย", value=top_problems, inline=False)
+
+            # ✅ ส่ง Embed + ไฟล์กราฟไปยัง Discord
+            await interaction.followup.send(embed=embed, file=discord.File(graph_path))
+
+        except Exception as e:
+            print(f"🔴 Error in FrequentProblemsModal: {e}")
+            await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
+
 class ComMenu(discord.ui.View):
     def __init__(self, bot):
         super().__init__()
@@ -68,10 +112,11 @@ class ComMenu(discord.ui.View):
     @discord.ui.button(label="ปัญหาที่พบบ่อย", style=discord.ButtonStyle.secondary)
     async def problemBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await interaction.response.send_message("📌 ปัญหาที่พบบ่อย: (รอข้อมูล)", ephemeral=False)
+            await interaction.response.send_modal(FrequentProblemsModal(self.bot))
         except Exception as e:
-            print(f"🔴 Error in problemBtn: {e}")
+            print(f"🔴 Error in evaluateBtn: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
+
 
     @discord.ui.button(label="ประเมินการแก้ปัญหา", style=discord.ButtonStyle.green)
     async def evaluateBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
