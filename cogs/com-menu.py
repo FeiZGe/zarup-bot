@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from utils.predata import load_data
 from utils.time_series import predict_future_complaints
-from utils.cluster import cluster_frequent_problems
+from utils.heatmap import generate_problem_heatmap
 
 class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
     def __init__(self, bot):
@@ -72,8 +72,8 @@ class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะ�
             # ✅ โหลดข้อมูลจาก CSV
             data = load_data()
 
-            # ✅ เรียกใช้ฟังก์ชัน Clustering สำหรับจังหวัดที่เลือก
-            top_problems, graph_path = cluster_frequent_problems(data, province=province)
+            # ✅ เรียกใช้ฟังก์ชัน generate_problem_heatmap สำหรับจังหวัดที่เลือก
+            top_problems, graph_path = generate_problem_heatmap(data, province=province)
 
             if top_problems is None or graph_path is None:
                 await interaction.followup.send(f"❌ ไม่พบข้อมูลสำหรับจังหวัด {province}", ephemeral=True)
