@@ -52,13 +52,6 @@ class Menu(discord.ui.View):
         except Exception as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
-    @discord.ui.button(label="Button 2", style=discord.ButtonStyle.primary)
-    async def button2(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            await interaction.response.send_message("Button 2 clicked", ephemeral=False)
-        except Exception as e:
-            await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
-
 class MenuCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
