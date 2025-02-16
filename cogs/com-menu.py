@@ -4,6 +4,7 @@ from discord.ext import commands
 from utils.predata import load_data
 from utils.time_series import predict_future_complaints
 from utils.heatmap import generate_problem_heatmap
+from utils.efficiency import evaluate_efficiency
 
 class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื่องร้องทุกข์"):
     def __init__(self, bot):
@@ -101,6 +102,51 @@ class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะ�
             print(f"🔴 Error in FrequentProblemsModal: {e}")
             await interaction.response.send(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
+class EfficiencyModal(discord.ui.Modal, title="📊 ประเมินประสิทธิภาพการแก้ปัญหา"):
+    def __init__(self, bot):
+        super().__init__()
+        self.bot = bot
+        self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="เช่น กรุงเทพมหานคร"))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        
+        try:
+            province = self.children[0].value.strip()
+            if not province:
+                await interaction.response.send("❌ กรุณากรอกชื่อจังหวัด", ephemeral=True)
+                return
+            
+            # ✅ โหลดข้อมูลจาก CSV
+            data = load_data()
+
+            # ✅ วิเคราะห์ประสิทธิภาพการแก้ปัญหา
+            graph_path, summary_text = evaluate_efficiency(data, province=province)
+            
+            if graph_path is None or summary_text is None:
+                await interaction.response.send(f"❌ ไม่พบข้อมูลสำหรับจังหวัด {province}", ephemeral=True)
+                return
+
+            # ✅ สร้าง Embed แสดงผล
+            embed = discord.Embed(
+                title=f"📊 ประสิทธิภาพการแก้ปัญหาใน {province}",
+                description=summary_text,
+                color=discord.Color.blue()
+            )
+            
+            # ✅ ส่ง Embed และรูปกราฟไปยังผู้ใช้
+            user = interaction.user
+            try:
+                await user.send(file=discord.File(graph_path))
+                await user.send(embed=embed)
+                await interaction.response.send_message("📩 **ผลลัพธ์ถูกส่งไปยัง DM ของคุณแล้ว**", ephemeral=True, delete_after=5)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ **ไม่สามารถส่ง DM ได้** กรุณาเปิดการรับข้อความจากเซิร์ฟเวอร์!", ephemeral=True, delete_after=5)
+
+        except Exception as e:
+            print(f"🔴 Error in EfficiencyModal: {e}")
+            await interaction.response.send(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
+
+
 class ComMenu(discord.ui.View):
     def __init__(self, bot):
         super().__init__()
@@ -126,7 +172,7 @@ class ComMenu(discord.ui.View):
     @discord.ui.button(label="ประเมินการแก้ปัญหา", style=discord.ButtonStyle.green)
     async def evaluateBtn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await interaction.response.send_message("💬 ประเมินการแก้ปัญหา: (รอข้อมูล)", ephemeral=False)
+            await interaction.response.send_modal(EfficiencyModal(self.bot))
         except Exception as e:
             print(f"🔴 Error in evaluateBtn: {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
