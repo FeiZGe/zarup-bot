@@ -4,11 +4,11 @@ import matplotlib.font_manager as fm
 import seaborn as sns
 import os
 
-# ✅ กำหนดฟอนต์ไทยสำหรับ Matplotlib
+# กำหนดฟอนต์ไทยสำหรับ Matplotlib
 font_path = os.path.join(os.path.dirname(__file__), "../assets/fonts/Prompt-Regular.ttf")
 font_prop = fm.FontProperties(fname=font_path)
 
-# ✅ โฟลเดอร์สำหรับบันทึกรูปภาพ
+# โฟลเดอร์สำหรับบันทึกรูปภาพ
 GRAPH_DIR = os.path.join(os.path.dirname(__file__), "../assets/graphs")
 os.makedirs(GRAPH_DIR, exist_ok=True)
 
