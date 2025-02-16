@@ -60,13 +60,12 @@ class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะ�
         self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="เช่น กรุงเทพมหานคร"))
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-
+        
         try:
             province = self.children[0].value.strip()
 
             if not province:
-                await interaction.followup.send("❌ กรุณากรอกชื่อจังหวัด", ephemeral=True)
+                await interaction.response.send("❌ กรุณากรอกชื่อจังหวัด", ephemeral=True)
                 return
 
             # ✅ โหลดข้อมูลจาก CSV
@@ -76,25 +75,31 @@ class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะ�
             top_problems, graph_path = generate_problem_heatmap(data, province=province)
 
             if top_problems is None or graph_path is None:
-                await interaction.followup.send(f"❌ ไม่พบข้อมูลสำหรับจังหวัด {province}", ephemeral=True)
+                await interaction.response.send(f"❌ ไม่พบข้อมูลสำหรับจังหวัด {province}", ephemeral=True)
                 return
 
             # ✅ สร้าง Embed แสดงผล
             embed = discord.Embed(
-                title=f"📊 ปัญหาที่พบบ่อยใน {province}",
-                description="🔹 **Top 5 ปัญหาสำคัญในพื้นที่**",
+                title=f"📊 ปัญหาที่พบบ่อยใน `{province}`",
+                description="จัดอันดับปัญหาที่พบจาก*มากไปน้อย*",
                 color=discord.Color.blue()
             )
 
             # ✅ เพิ่มข้อมูลปัญหาที่พบบ่อย (เรียงตามจำนวน)
-            embed.add_field(name="📌 ปัญหาที่พบบ่อย", value=top_problems, inline=False)
+            embed.add_field(name="📌 อันดับ", value=top_problems, inline=False)
 
-            # ✅ ส่ง Embed + ไฟล์กราฟไปยัง Discord
-            await interaction.followup.send(embed=embed, file=discord.File(graph_path))
+            # ✅ ส่ง Embed + รูปกราฟไปยัง DM
+            user = interaction.user
+            try:
+                await user.send(file=discord.File(graph_path))
+                await user.send(embed=embed)
+                await interaction.response.send_message("📩 **ผลลัพธ์ถูกส่งไปยัง DM ของคุณแล้ว**", ephemeral=True, delete_after=5)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ **ไม่สามารถส่ง DM ได้** กรุณาเปิดการรับข้อความจากเซิร์ฟเวอร์!", ephemeral=True, delete_after=5)
 
         except Exception as e:
             print(f"🔴 Error in FrequentProblemsModal: {e}")
-            await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
+            await interaction.response.send(f"❌ เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class ComMenu(discord.ui.View):
     def __init__(self, bot):
