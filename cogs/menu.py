@@ -11,6 +11,7 @@ class URLInputModal(discord.ui.Modal):
             required=True
         )
         self.add_item(self.url_input)
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
         self.bot = bot  # ให้ bot มีการกำหนด
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -42,6 +43,7 @@ class Menu(discord.ui.View):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot  # เก็บ bot ไว้ใน view
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
 
     @discord.ui.button(label="สรุปบทความ", style=discord.ButtonStyle.primary)
     async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):

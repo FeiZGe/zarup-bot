@@ -10,6 +10,7 @@ class PredictModal(discord.ui.Modal, title="🔍 พยากรณ์เรื�
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
         self.add_item(discord.ui.TextInput(label="ประเภทปัญหา", placeholder="เช่น สังคมและสวัสดิการ, กฎหมาย"))
         self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="กรอกชื่อจังหวัด (เช่น กรุงเทพมหานคร)"))
 
@@ -58,6 +59,7 @@ class FrequentProblemsModal(discord.ui.Modal, title="🔍 วิเคราะ�
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
         self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="เช่น กรุงเทพมหานคร"))
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -106,6 +108,7 @@ class EfficiencyModal(discord.ui.Modal, title="📊 ประเมินปร�
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
         self.add_item(discord.ui.TextInput(label="จังหวัด", placeholder="เช่น กรุงเทพมหานคร"))
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -151,6 +154,7 @@ class ComMenu(discord.ui.View):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+        self.timeout = None  # 🔰 ป้องกันหมดอายุ
 
     @discord.ui.button(label="พยากรณ์เรื่องร้องทุกข์", style=discord.ButtonStyle.primary)
     async def predict_complaint(self, interaction: discord.Interaction, button: discord.ui.Button):
